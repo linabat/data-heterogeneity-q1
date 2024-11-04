@@ -9,8 +9,9 @@ from sklearn.mixture import GaussianMixture
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
 
-
+### Retrieving Datasets 
 def retrieve_adult_data():
     """
     This function is used to retrieve UCI's adult dataset
@@ -46,7 +47,26 @@ def retrieve_adult_data():
     
     return X, y
 
+def retrieve_covid_data(covid_fp, replace_num): 
+    """
+    This function is used to retrieve the covid dataset
+    """
+    covid = pd.read_csv(covid_fp)
+    # Cleaning up column names
+    covid.columns = covid.columns.str.strip().str.lower()
 
+    # Creating boolean column which is what will be predicted
+    covid["died_bool"] = covid["date_died"] != "9999-99-99"
+
+    # Replacing all 98 values with 97 so there is only one number that indicates whethe
+    # the value is missing
+    covid.replace(replace_num, 97, inplace=True)
+    
+    covid.drop(columns=["clasiffication_final", "date_died"], inplace=True)
+    
+    return covid 
+
+### GMM
 def gmm_adults(gmm_adult_ts): 
     """
     This function prints out a classification report for the Gaussian Mixture Model that
@@ -75,27 +95,6 @@ def gmm_adults(gmm_adult_ts):
     print(classification_report(y_test, y_pred))
     
     return 
-
-
-def retrieve_covid_data(covid_fp, replace_num): 
-    """
-    This function is used to retrieve the covid dataset
-    """
-    covid = pd.read_csv(covid_fp)
-    # Cleaning up column names
-    covid.columns = covid.columns.str.strip().str.lower()
-
-    # Creating boolean column which is what will be predicted
-    covid["died_bool"] = covid["date_died"] != "9999-99-99"
-
-    # Replacing all 98 values with 97 so there is only one number that indicates whethe
-    # the value is missing
-    covid.replace(replace_num, 97, inplace=True)
-    
-    covid.drop(columns=["clasiffication_final", "date_died"], inplace=True)
-    
-    return covid 
-
 
 def gmm_covid(covid_fp, replace_num, gmm_covid_ts): 
     """
@@ -188,6 +187,43 @@ def plot_pca_gmm_covid():
     plt.show()
     
     return 
+
+
+### KMeans
+def kmeans_adults(): 
+    X, y = retrieve_adult_data()
+    data = pd.concat([X,y], axis=1)
+    
+    categorical_cols = data.select_dtypes(include=['object']).columns
+    data[categorical_cols] = data[categorical_cols].apply(LabelEncoder().fit_transform)
+    scaler = StandardScaler()
+    numeric_cols = data.select_dtypes(include=['int64', 'float64']).columns
+    data[numeric_cols] = scaler.fit_transform(data[numeric_cols])
+    
+    k = 2
+    kmeans = KMeans(n_clusters=k, random_state=0)
+    data['cluster'] = kmeans.fit_predict(data)
+    
+    score = silhouette_score(data[numeric_cols], data['cluster'])
+    print(f'Silhouette Score for {k} clusters: {score}')
+    
+    # If you need dimensionality reduction (for datasets with >2 features)
+    pca = PCA(n_components=2)
+    X_reduced = pca.fit_transform(data)
+
+    # Plot the clusters
+    plt.figure(figsize=(10, 6))
+    sns.scatterplot(x=X_reduced[:, 0], y=X_reduced[:, 1], hue=data['cluster'], palette='viridis', s=50)
+
+    # Mark cluster centers
+    centers = kmeans.cluster_centers_
+    centers_reduced = pca.transform(centers)  # Reduce dimensions for plotting
+    plt.scatter(centers_reduced[:, 0], centers_reduced[:, 1], c='red', s=200, alpha=0.6, label='Centers')
+    plt.title("K-means Clustering")
+    plt.xlabel("PCA Component 1")
+    plt.ylabel("PCA Component 2")
+    plt.legend()
+    plt.show()
 
 
 
