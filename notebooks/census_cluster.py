@@ -2,47 +2,17 @@ from folktables import ACSDataSource, ACSIncome, ACSEmployment, ACSPublicCoverag
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
-from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.models import Sequential, Model
+from keras.models import load_model
 from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.constraints import Constraint
 from tensorflow.keras.regularizers import Regularizer
+from tensorflow.keras.callbacks import LearningRateScheduler, ModelCheckpoint
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.initializers import RandomUniform
 import tensorflow as tf
-
 import random
-import numpy as np
-np.random.seed(0)
-
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers, regularizers
-from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import (
-    Input, Dense, Conv2D, Flatten, 
-    MaxPooling2D, BatchNormalization, Dropout
-)
-
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.callbacks import (
-    EarlyStopping,
-    ModelCheckpoint,
-    LearningRateScheduler
-)
-from tensorflow.keras.initializers import RandomUniform
-from tensorflow.keras.regularizers import l1, l2
-from tensorflow.keras.constraints import Constraint
-from tensorflow.keras.optimizers import Adam
-from keras.initializers import Constant
-
-from tensorflow.keras.datasets import mnist
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import (
-    confusion_matrix,
-    roc_auc_score,
-    accuracy_score
-)
 
 def load_census_data():
     """Load and process census data."""
@@ -64,14 +34,18 @@ def load_census_data():
     # Encode state labels
     label_encoder = LabelEncoder()
     all_data['ST_encoded'] = label_encoder.fit_transform(all_data['ST'])
-    features = all_data.drop(columns=["ST", "ST_encoded"]).to_numpy()
     labels = all_data["ST_encoded"].to_numpy()
+    features = all_data.drop(columns=["ST", "ST_encoded"]).to_numpy()
 
     return features, labels
 
-# ===========================
-# Helper Classes
-# ===========================
+def lr_schedule(epoch):
+    if epoch < 20:
+        return 1e-4
+    else:
+        return 1e-5
+
+
 class ClipConstraint(Constraint):
     """
     Clips model weights to a given range [min_value, max_value].
@@ -86,6 +60,8 @@ class ClipConstraint(Constraint):
         return w / tf.reduce_sum(w, axis=1, keepdims=True)
     def get_config(self):
         return {'min_value': self.min_value, 'max_value': self.max_value}
+
+
 
 class VarianceRegularizer(Regularizer):
     """
@@ -104,24 +80,17 @@ class VarianceRegularizer(Regularizer):
     def get_config(self):
         return {'factor': self.factor}
 
-# ===========================
-# Model Definition and Training
-# ===========================
-def lr_schedule(epoch):
-    """Defines the learning rate schedule."""
-    if epoch < 20:
-        return 1e-4
-    else:
-        return 1e-5
+
 
 def get_model_z(X,s,n_z,model_name,epochs=20,verbose=1,var_reg=0.0):
     """
     Defines and trains a clustering model. 
     """
+    lr_scheduler = LearningRateScheduler(lr_schedule, verbose=1)
+    
     #Shuffle X and s together
     indices = np.arange(X.shape[0])
     np.random.shuffle(indices)
-    lr_scheduler = LearningRateScheduler(lr_schedule, verbose=1)
     X = X[indices]
     s = s[indices]
     model = Sequential([
@@ -141,7 +110,8 @@ def get_model_z(X,s,n_z,model_name,epochs=20,verbose=1,var_reg=0.0):
 
     model_checkpoint_callback = ModelCheckpoint(
         filepath=model_checkpoint_path,
-        save_best_only=True,
+        # changing this from True to False
+        save_best_only=False,
         monitor='val_loss',
         mode='min',
         verbose=verbose
@@ -158,6 +128,7 @@ def get_model_z(X,s,n_z,model_name,epochs=20,verbose=1,var_reg=0.0):
     )
     
     best_model = load_model(model_checkpoint_path, custom_objects={'ClipConstraint': ClipConstraint,'VarianceRegularizer': VarianceRegularizer})
+
     return best_model
 
 def pzx(X,best_model,arg_max=True):
@@ -173,7 +144,7 @@ def pzx(X,best_model,arg_max=True):
 def pzxs(X,s,best_model,arg_max=True):
     """
     Compute conditional probabilities - probability of cluster z given x and additional
-    information s
+    informations
     """
     softmax_output_model = Model(inputs=best_model.input, outputs=best_model.layers[-2].output)
     p = softmax_output_model.predict(X)
@@ -185,17 +156,21 @@ def pzxs(X,s,best_model,arg_max=True):
         p2 = np.argmax(p2,axis=1)
     return p2
 
+
 def main():
-    seed = 0
-    print(f"Seed : {seed}")
-    np.random.seed(seed)
-    tf.random.set_seed(seed)
-    random.seed(seed)
+    """Main function to run the entire process."""
+    # # Set random seed for reproducibility
+    # seed = 0
+    # print(f"Seed: {seed}")
+    # random.seed(seed)
+    # np.random.seed(seed)
+    # tf.random.set_seed(seed)
+
+    # Load data
+    features, labels = load_census_data()
+    s1 = to_categorical(labels)
     
-    # lr_scheduler = LearningRateScheduler(lr_schedule, verbose=1)
-    features, s_encoded = load_census_data()
-    s1 = to_categorical(s_encoded)
-        
+
     best_model = get_model_z(features, s1, 4, 'best_census_model_inc.h5', epochs=60, var_reg=0)
 
     # for function pzx
