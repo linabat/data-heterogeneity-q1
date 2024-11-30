@@ -14,58 +14,38 @@ from tensorflow.keras.initializers import RandomUniform
 import tensorflow as tf
 import random
 
-def preprocess_features(features):
-    """Handle missing values and normalize features."""
-    # Separate categorical and continuous columns
-    categorical_columns = [i for i in range(features.shape[1]) if features[:, i].dtype == np.object_]
-    continuous_columns = [i for i in range(features.shape[1]) if i not in categorical_columns]
 
-    # Handle missing values in continuous features with mean imputation
-    continuous_imputer = SimpleImputer(strategy='mean')
-    if continuous_columns:
-        features[:, continuous_columns] = continuous_imputer.fit_transform(features[:, continuous_columns])
-
-    # Handle missing values in categorical features with mode imputation
-    categorical_imputer = SimpleImputer(strategy='most_frequent')
-    if categorical_columns:
-        features[:, categorical_columns] = categorical_imputer.fit_transform(features[:, categorical_columns])
-
-    # Add a missingness indicator for continuous columns
-    for col in continuous_columns:
-        missing_indicator = np.isnan(features[:, col]).astype(int)
-        features = np.column_stack([features, missing_indicator])
-
-    # Normalize continuous features
-    scaler = MinMaxScaler()
-    if continuous_columns:
-        features[:, continuous_columns] = scaler.fit_transform(features[:, continuous_columns])
-
-    return features
-
-def load_census_data():
-    """Load and process census data."""
-    states = [
-        "CA", "OR", "WA", "ME", "NY", "NJ", "FL", "VA", "NH", "ND", "SD", "PR", "WY", "CO", "MT", "TX"
-    ]
+def load_census_data(data_processor):
+    """
+    Load and process census data.
+    @param data_processor: ACSIncome, ACSEmployment, ACSPublicCoverage 
+    """
+    states = ['AK','AL','AR','AZ','CA','CO','CT','DC','DE','FL','GA','HI','IA','ID','IL','IN','KS','KY','LA',
+        'MA','MD','ME','MI','MN','MO','MS','MT','NC','ND','NH','NJ','NM','NY','NV','OH','OK','OR','PA','PR',
+        'RI','SC','SD','TN','TX','UT','VA','VT','WA','WI','WV','WY']
+    
+    
     data_source = ACSDataSource(survey_year='2018', horizon='1-Year', survey='person')
-    data_processors = [ACSIncome, ACSEmployment, ACSPublicCoverage]
     all_data = pd.DataFrame()
 
-    for data_processor in data_processors: 
-        for state in states: 
+    for state in states: 
+        try:
             state_data = data_source.get_data(states=[state], download=True)     
             state_features, _, _ = data_processor.df_to_numpy(state_data)
             state_features_df = pd.DataFrame(state_features)
             state_features_df['ST'] = state
             all_data = pd.concat([all_data, state_features_df], ignore_index=True)
+        except Exception as e: 
+            continue
 
     # Encode state labels
     label_encoder = LabelEncoder()
+    states_from_df = all_data["ST"].to_numpy()
     all_data['ST_encoded'] = label_encoder.fit_transform(all_data['ST'])
     labels = all_data["ST_encoded"].to_numpy()
     features = all_data.drop(columns=["ST", "ST_encoded"]).to_numpy()
 
-    return features, labels
+    return features, labels, states_from_df
 
 def lr_schedule(epoch):
     if epoch < 20:
@@ -187,19 +167,19 @@ def pzxs(X,s,best_model,arg_max=True):
 
 def main():
     """Main function to run the entire process."""
-    # # Set random seed for reproducibility
-    # seed = 0
-    # print(f"Seed: {seed}")
-    # random.seed(seed)
-    # np.random.seed(seed)
-    # tf.random.set_seed(seed)
+    # Set random seed for reproducibility
+    seed = 0
+    print(f"Seed: {seed}")
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
 
     # Load data
-    features, labels = load_census_data()
+    features, labels, states_from_df = load_census_data(ACSPublicCoverage)  # will need to change this based off of source we're looking at 
     s1 = to_categorical(labels)
     
 
-    best_model = get_model_z(features, s1, 4, 'best_census_model_inc.h5', epochs=20, var_reg=0)
+    best_model = get_model_z(features, s1, 4, 'best_census_model_inc.h5', epochs=60, var_reg=0)
 
     # for function pzx
     p1_fl = pzx(features, best_model, arg_max=False)
@@ -207,7 +187,8 @@ def main():
 
     cluster_state_df = pd.DataFrame({
         "p1_tr":p1_tr,
-        "states":labels
+        "states":states_from_df, 
+        "type": "public_coverage"
         }
         )
 
