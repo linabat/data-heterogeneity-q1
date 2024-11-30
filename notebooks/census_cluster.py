@@ -14,6 +14,34 @@ from tensorflow.keras.initializers import RandomUniform
 import tensorflow as tf
 import random
 
+def preprocess_features(features):
+    """Handle missing values and normalize features."""
+    # Separate categorical and continuous columns
+    categorical_columns = [i for i in range(features.shape[1]) if features[:, i].dtype == np.object_]
+    continuous_columns = [i for i in range(features.shape[1]) if i not in categorical_columns]
+
+    # Handle missing values in continuous features with mean imputation
+    continuous_imputer = SimpleImputer(strategy='mean')
+    if continuous_columns:
+        features[:, continuous_columns] = continuous_imputer.fit_transform(features[:, continuous_columns])
+
+    # Handle missing values in categorical features with mode imputation
+    categorical_imputer = SimpleImputer(strategy='most_frequent')
+    if categorical_columns:
+        features[:, categorical_columns] = categorical_imputer.fit_transform(features[:, categorical_columns])
+
+    # Add a missingness indicator for continuous columns
+    for col in continuous_columns:
+        missing_indicator = np.isnan(features[:, col]).astype(int)
+        features = np.column_stack([features, missing_indicator])
+
+    # Normalize continuous features
+    scaler = MinMaxScaler()
+    if continuous_columns:
+        features[:, continuous_columns] = scaler.fit_transform(features[:, continuous_columns])
+
+    return features
+
 def load_census_data():
     """Load and process census data."""
     states = [
@@ -171,19 +199,25 @@ def main():
     s1 = to_categorical(labels)
     
 
-    best_model = get_model_z(features, s1, 4, 'best_census_model_inc.h5', epochs=60, var_reg=0)
+    best_model = get_model_z(features, s1, 4, 'best_census_model_inc.h5', epochs=20, var_reg=0)
 
     # for function pzx
     p1_fl = pzx(features, best_model, arg_max=False)
     p1_tr = pzx(features, best_model, arg_max=True)
 
-    # for function pzxs
-    p2_fl = pzxs(features, s1, best_model, arg_max=False)
-    p2_tr = pzxs(features, s1, best_model, arg_max=True)
+    cluster_state_df = pd.DataFrame({
+        "p1_tr":p1_tr,
+        "states":labels
+        }
+        )
+
+    output_csv = "cluster_state_data.csv"
+    cluster_state_df.to_csv(output_csv, index=False)
+    
 
     try:
         np.save("p1_fl__pzx_predictions.npy", p1_fl)
-        print("Cluster assignments saved to 'p1_fl__pzx_predictions.npy'")
+        print("Cluster assignments saved to 'p1_fl_pzx_predictions.npy'")
     except Exception as e:
         print(f"Error saving predictions: {e}")
 
@@ -193,18 +227,6 @@ def main():
     except Exception as e:
         print(f"Error saving predictions: {e}")
 
-
-    try:
-        np.save("p2_fl__pzxs_predictions.npy", p2_fl)
-        print("Cluster assignments saved to 'p2_fl__pzxs_predictions.npy'")
-    except Exception as e:
-        print(f"Error saving predictions: {e}")
-
-    try:
-        np.save("p2_tr_pzxs_predictions.npy", p2_tr)
-        print("Cluster assignments saved to 'p2_tr_pzxs_predictions.npy'")
-    except Exception as e:
-        print(f"Error saving predictions: {e}")
     
 if __name__ == "__main__":
     main()
