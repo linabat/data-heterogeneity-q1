@@ -521,7 +521,8 @@ def visualization_images(file_paths, p, y, p_value, y_value, dataset_path):
     fig, axes = plt.subplots(2, 2, figsize=(10, 10))
     
     for ax, file_path in zip(axes.flatten(), selected_file_paths):
-        img = Image.open(dataset_path + file_path)
+        file = os.path.join(dataset_path, file_path)
+        img = Image.open(file)
         ax.imshow(img)
         ax.axis('off')  
     
@@ -533,7 +534,7 @@ def visualization_images(file_paths, p, y, p_value, y_value, dataset_path):
 
     output_file_path = os.path.join(output_folder, f"{p_value}_{y_value}.png")
 
-    plt.savefig(f"{output_folder}{p_value}_{y_value}.png", dpi=300)
+    plt.savefig(output_file_path, dpi=300)
     
 def download_wb_data(tar_file_path): # CHECKED AND GOOD
     tar_file_path = os.path.join(repo_root, tar_file_path)
@@ -638,7 +639,7 @@ def run_waterbirds(output_csv_name, output_model_results, num_clusters=2, num_ep
     output_txt_path = os.path.join(output_folder, output_model_results)
     with open(output_txt_path, "w") as file:
         # Proportions for each cluster
-        file.write(f"Proportion Correctly Matched: {prop_correct}")
+        file.write(f"Proportion Correctly Matched: {prop_correct}\n")
         file.write("Proportions for Each Cluster:\n")
         for cluster, proportion in prop_per_cluster.items():
             file.write(f"Cluster {cluster}: {proportion:.4f}\n")
