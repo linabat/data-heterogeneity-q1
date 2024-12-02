@@ -98,6 +98,7 @@ import seaborn as sns
 
 from PIL import Image
 import os
+import tarfile
 
 # This will be used when saving the files
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -399,7 +400,6 @@ def load_census_data(data_processor):
     return features, labels, states_from_df
 
 
-
 # Clustering method - Parjanya's code 
 
 # ===========================
@@ -534,8 +534,21 @@ def visualization_images(p_value, y_value, dataset_path):
     output_file_path = os.path.join(output_folder, f"{p_value}_{y_value}.png")
 
     plt.savefig(f"{output_folder}{p_value}_{y_value}.png", dpi=300)
+    
+def download_waterbirds_data(tar_file_path): # CHECKED AND GOOD
+    tar_file_path = os.path.join(repo_root, tar_file_path)
+    extract_path = os.path.join(repo_root, "waterbirds_data")
+    # Create the extraction directory if it doesn't exist
+    os.makedirs(extract_path, exist_ok=True)
 
-def retrieve_features(dataset_path):
+    # Open and extract the .tar.gz file
+    with tarfile.open(tar_file_path, 'r:gz') as tar:
+        tar.extractall(path=extract_path)
+        print(f"Extracted contents to: {extract_path}")
+        
+def retrieve_features(): # CHECKED AND GOOD
+    # Know this path cause this is where images were saved from download_waterbirds_data function
+    dataset_path = os.path.join(repo_root, "waterbirds_data/waterbird_complete95_forest2water2")
     metadata_file = os.path.join(dataset_path, 'metadata.csv')
     metadata_df = pd.read_csv(metadata_file)
 
@@ -546,7 +559,7 @@ def retrieve_features(dataset_path):
 
     output_file_path = os.path.join(output_folder, "features.npy")
     
-    np.save(output_folder, features)
+    np.save(output_file_path, features)
 # ===========================
 # Waterbirds Run
 # ===========================
