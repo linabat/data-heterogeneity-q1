@@ -1,0 +1,9 @@
+{
+    "data_processor":ACSIncome, 
+    "output_csv_path":, 
+    "num_clusters":4, 
+    "num_epochs":60, 
+    "model_path":'best_census_model_inc.h5', 
+    "num_var_reg":0, 
+    "seed_num":0
+}
