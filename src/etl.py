@@ -50,8 +50,12 @@ from tensorflow.keras.initializers import RandomUniform
 import tensorflow as tf
 import random
 
+from sklearn.metrics import pairwise_distances
+from sklearn.metrics.pairwise import cosine_similarity
+
 import matplotlib.pyplot as plt
-import matplotlib.pyplot as plt
+import seaborn as sns
+
 from PIL import Image
 
 ### Retrieving Datasets 
@@ -560,7 +564,6 @@ def run_waterbirds(dataset_path, features_path, output_csv_path, num_clusters=2,
 # Census Data Set
 # ===========================
 
-    
 def run_census(data_processor, dataset_path, features_path, output_csv_path, num_clusters=4, num_epochs=60, model_path='best_census_model_inc.h5', , num_var_reg=0, seed_num=0):
     
     set_seed(seed_num)
@@ -590,7 +593,76 @@ def run_census(data_processor, dataset_path, features_path, output_csv_path, num
 
     output_csv = output_csv_path
     cluster_state_df.to_csv(output_csv, index=False)
+
+def save_census_data(census_data_csv_path, output_path): 
+    """
+    census_data_csv_path : should be what is outputed from run_csv
+    output_path: should indicate which data processor was used
+    """
+    census_data = pd.read_csv(census_data_csv_path) 
+    census_data = census_data.rename(columns={"p1_tr":"cluster"})
+    census_data.to_csv(output_csv, index=False)
+
+def run_census_jaccard(census_data_csv_path, output_jaccard_census_results_path): 
+    """
+    census_data_csv_path : should be the one after save_census_data 
+    output_jaccard_census_results_path : should indicate which data processor this is being done for 
+    """
+    census_data = pd.read_csv(census_data_csv_path) 
+    # Create a binary matrix for the clusters (1 if the state belongs to the cluster, 0 otherwise)
+    state_cluster_matrix = pd.pivot_table(census_data, index='states', columns='cluster', aggfunc=lambda x: 1, fill_value=0)
     
+    # Convert to a numpy array to calculate distances
+    state_cluster_matrix_array = state_cluster_matrix.values
+    
+    # Calculate the pairwise Jaccard similarity between states (1 - Jaccard distance)
+    jaccard_sim_matrix = 1 - pairwise_distances(state_cluster_matrix_array, metric='jaccard')
+    
+    # Convert the result to a DataFrame for better readability
+    jaccard_sim_df = pd.DataFrame(jaccard_sim_matrix, index=state_cluster_matrix.index, columns=state_cluster_matrix.index)
+    
+    # Plotting the Jaccard similarity matrix as a heatmap
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(jaccard_sim_df, annot=True, cmap="Blues", cbar=True, xticklabels=True, yticklabels=True)
+    plt.title('State Similarity Based on Clusters (Jaccard Similarity)')
+
+    # Save the heatmap as a PNG file
+    plt.savefig(f"{output_jaccard_census_results_path}.png")
+    plt.show()
+
+
+def run_census_cosine(census_data_csv_path, output_cosine_census_results_path): 
+    """
+    census_data_csv_path : should be the one after save_census_data 
+    output_cosine_census_results_path : should indicate which data processor this is being done for 
+    """
+    census_data = pd.read_csv(census_data_csv_path) 
+    
+    # Create a binary matrix for the clusters (1 if the state belongs to the cluster, 0 otherwise)
+    state_cluster_matrix = pd.pivot_table(census_data, index='states', columns='cluster', aggfunc=lambda x: 1, fill_value=0)
+
+    # Convert to a numpy array to calculate distances
+    state_cluster_matrix_array = state_cluster_matrix.values
+    
+    # Calculate the pairwise Cosine similarity between states
+    cosine_sim_matrix = cosine_similarity(state_cluster_matrix_array)
+    
+    # Convert the result to a DataFrame for better readability
+    cosine_sim_df = pd.DataFrame(cosine_sim_matrix, index=state_cluster_matrix.index, columns=state_cluster_matrix.index)
+    
+    # # Display the cosine similarity matrix
+    # print(cosine_sim_df)
+    
+    # Plotting the Jaccard similarity matrix as a heatmap
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cosine_sim_df, annot=True, cmap="Blues", cbar=True, xticklabels=True, yticklabels=True)
+    plt.title('State Similarity Based on Clusters (Cosine Similarity)')
+    
+    # Save the heatmap as a PNG file
+    plt.savefig(f"{output_cosine_census_results_path}.png")
+    plt.show()
+
+        
 
     
     
