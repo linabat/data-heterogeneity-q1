@@ -175,11 +175,11 @@ def main():
     tf.random.set_seed(seed)
 
     # Load data
-    features, labels, states_from_df = load_census_data(ACSPublicCoverage)  # will need to change this based off of source we're looking at 
+    features, labels, states_from_df = load_census_data(ACSIncome)  # will need to change this based off of source we're looking at 
     s1 = to_categorical(labels)
     
 
-    best_model = get_model_z(features, s1, 4, 'best_census_model_inc.h5', epochs=60, var_reg=0)
+    best_model = get_model_z(features, s1, 4, 'best_census_model_inc.h5', epochs=40, var_reg=0)
 
     # for function pzx
     p1_fl = pzx(features, best_model, arg_max=False)
@@ -197,7 +197,7 @@ def main():
     
 
     try:
-        np.save("p1_fl__pzx_predictions.npy", p1_fl)
+        np.save("p1_fl_pzx_predictions.npy", p1_fl)
         print("Cluster assignments saved to 'p1_fl_pzx_predictions.npy'")
     except Exception as e:
         print(f"Error saving predictions: {e}")
