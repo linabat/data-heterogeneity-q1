@@ -472,7 +472,7 @@ def get_model_z(X,s,n_z,model_name,epochs=20,verbose=1,var_reg=0.0):
     ])
     optimizer = Adam(learning_rate=1e-3) # an adaptive learning rate optimizer
     model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
-    model_checkpoint_path = os.path.join(repo_root, model_checkpoint_path)
+    model_checkpoint_path = os.path.join(repo_root, model_name)
 
     model_checkpoint_callback = ModelCheckpoint(
         filepath=model_checkpoint_path,
@@ -511,7 +511,7 @@ def set_seed(seed_num):
     np.random.seed(seed)
     tf.random.set_seed(seed)
 
-def visualization_images(p_value, y_value, dataset_path):
+def visualization_images(file_paths, p, y, p_value, y_value, dataset_path):
     """
     Visualizes a 2x2 grid of images based on specified filtering conditions.
     """
@@ -535,7 +535,7 @@ def visualization_images(p_value, y_value, dataset_path):
 
     plt.savefig(f"{output_folder}{p_value}_{y_value}.png", dpi=300)
     
-def download_waterbirds_data(tar_file_path): # CHECKED AND GOOD
+def download_wb_data(tar_file_path): # CHECKED AND GOOD
     tar_file_path = os.path.join(repo_root, tar_file_path)
     extract_path = os.path.join(repo_root, "waterbirds_data")
     # Create the extraction directory if it doesn't exist
@@ -546,7 +546,7 @@ def download_waterbirds_data(tar_file_path): # CHECKED AND GOOD
         tar.extractall(path=extract_path)
         print(f"Extracted contents to: {extract_path}")
         
-def retrieve_features(): # CHECKED AND GOOD
+def retrieve_wb_features(): # CHECKED AND GOOD
     # Know this path cause this is where images were saved from download_waterbirds_data function
     dataset_path = os.path.join(repo_root, "waterbirds_data/waterbird_complete95_forest2water2")
     metadata_file = os.path.join(dataset_path, 'metadata.csv')
@@ -563,16 +563,20 @@ def retrieve_features(): # CHECKED AND GOOD
 # ===========================
 # Waterbirds Run
 # ===========================
-def run_waterbirds(dataset_path, output_csv_path, num_clusters=2, num_epochs=60, model_path='best_wb_model_inc.h5', num_var_reg=0, seed_num=0): 
+def run_waterbirds(output_csv_name, output_model_results, num_clusters=2, num_epochs=60, model_path='best_wb_model_inc.h5', num_var_reg=0, seed_num=0): 
     set_seed(seed_num)
 
+    dataset_path = dataset_path = os.path.join(repo_root, "waterbirds_data/waterbird_complete95_forest2water2")
     features_path = os.path.join(repo_root, "waterbirds_features/features.npy")
     metadata_file = os.path.join(dataset_path, 'metadata.csv')
     metadata_df = pd.read_csv(metadata_file)
+    y = metadata_df['y']
+
     s = metadata_df['split'].values 
     s=(s+1)//2
 
     features = np.load(features_path)
+    file_paths = metadata_df['img_filename'].values
 
     # Make s1 as one hot of s
     s1 = to_categorical(s)
@@ -584,11 +588,9 @@ def run_waterbirds(dataset_path, output_csv_path, num_clusters=2, num_epochs=60,
     p1_tr = pzx(features, best_model, arg_max=True)
 
     file_paths = metadata_df['img_filename'].values
-
     
     y = metadata_df['y']
     place = metadata_df['place'] # check if y and place match and output into a txt file
-
 
     p1_fl_df = pd.DataFrame(
         p1_fl,
@@ -597,14 +599,12 @@ def run_waterbirds(dataset_path, output_csv_path, num_clusters=2, num_epochs=60,
 
     p1_tr_df = pd.DataFrame(
         p1_tr,
-        columns=['p1_tr']
+        columns=['cluster']
     )
 
     # Combine everything into a DataFrame
     p_y_place_df = pd.concat(
-        [
-            p1_fl_df,
-            p1_tr_df, 
+        [p1_fl_df, p1_tr_df,
             pd.DataFrame({
                 "y": y,
                 "place": place
@@ -614,24 +614,47 @@ def run_waterbirds(dataset_path, output_csv_path, num_clusters=2, num_epochs=60,
     )
 
     # Save the DataFrame to a CSV file
-    output_file = os.path.join(repo_root, output_csv_path)
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    output_folder = os.path.join(repo_root, "wb_retrieved_data")
+    os.makedirs(output_folder, exist_ok=True)
+    output_csv_path = os.path.join(output_folder, output_csv_name)
     p_y_place_df.to_csv(output_csv_path, index=False)
 
 
+    ## EVALUATION OF MODEL OUTPUT
+    all_equal = (p_y_place_df["cluster"] == p_y_place_df["place"]) & \
+            (p_y_place_df["cluster"] == p_y_place_df["y"])
+    prop_correct = all_equal.sum() / p_y_place_df.shape[0]
+
+    # Calculate the total number of rows
+    total_rows = p_y_place_df.shape[0]
+    
+    # Calculate the proportion for each unique cluster
+    prop_per_cluster = (
+        p_y_place_df["cluster"].value_counts(normalize=True).to_dict()
+    )
+    
+    output_model_folder = os.path.join(repo_root, "model_results")
+    os.makedirs(output_folder, exist_ok=True)
+    output_txt_path = os.path.join(output_folder, output_model_results)
+    with open(output_txt_path, "w") as file:
+        # Proportions for each cluster
+        file.write(f"Proportion Correctly Matched: {prop_correct}")
+        file.write("Proportions for Each Cluster:\n")
+        for cluster, proportion in prop_per_cluster.items():
+            file.write(f"Cluster {cluster}: {proportion:.4f}\n")
+
+
     # Doing all the combination to see what it should be
-    visualization_images(1, 0, dataset_path)
-    visualization_images(1, 1, dataset_path)
-    visualization_images(0, 1, dataset_path)
-    visualization_images(0, 0, dataset_path)
-
-
+    visualization_images(file_paths, p1_tr, y, 1, 0, dataset_path)
+    visualization_images(file_paths, p1_tr, y,1, 1, dataset_path)
+    visualization_images(file_paths, p1_tr, y, 0, 1, dataset_path)
+    visualization_images(file_paths, p1_tr, y, 0, 0, dataset_path)
 
 # ===========================
 # Census Data Set
 # ===========================
 
-def run_census(data_processor, output_csv_path, num_clusters=4, num_epochs=60, model_path='best_census_model_inc.h5', num_var_reg=0, seed_num=0):
+def run_census(data_processor, output_csv_name, num_clusters=4, num_epochs=60, model_path='best_census_model_inc.h5', num_var_reg=0, seed_num=0):
     
     set_seed(seed_num)
     features, labels, states_from_df = load_census_data(data_processor)
@@ -654,18 +677,20 @@ def run_census(data_processor, output_csv_path, num_clusters=4, num_epochs=60, m
     cluster_state_df = pd.DataFrame({
         "cluster":p1_tr,
         "states":states_from_df, 
-        "type": "public_coverage"
+        "type": processor_type
         }
         )
 
-    output_file = os.path.join(repo_root, output_csv_path)
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    # Save the DataFrame to a CSV file
+    output_folder = os.path.join(repo_root, "census_retrieved_data")
+    os.makedirs(output_folder, exist_ok=True)
+    output_csv_path = os.path.join(output_folder, output_csv_name)
     cluster_state_df.to_csv(output_csv_path, index=False)
 
-def run_census_jaccard(census_data_csv_path, output_jaccard_census_results_path): 
+def run_census_jaccard(census_data_csv_path, jaccard_census_path_name): 
     """
-    census_data_csv_path : should be the one after run_census 
-    output_jaccard_census_results_path : should indicate which data processor this is being done for 
+    census_data_csv_path : should be the one after run_census - will be in the census_retrieved_data folder
+    output_jaccard_census_results_path : just the name of the jaccard plot - should be .png and indicate data processor
     """
     census_data = pd.read_csv(census_data_csv_path) 
     # Create a binary matrix for the clusters (1 if the state belongs to the cluster, 0 otherwise)
@@ -685,17 +710,17 @@ def run_census_jaccard(census_data_csv_path, output_jaccard_census_results_path)
     sns.heatmap(jaccard_sim_df, annot=True, cmap="Blues", cbar=True, xticklabels=True, yticklabels=True)
     plt.title('State Similarity Based on Clusters (Jaccard Similarity)')
 
-    output_file = os.path.join(repo_root, output_jaccard_census_results_path)
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    # Save the plot as a PNG file
+    output_folder = os.path.join(repo_root, "census_image_results")
+    os.makedirs(output_folder, exist_ok=True)
+    output_file = os.path.join(repo_root, jaccard_census_path_name)
     plt.savefig(output_file)
 
-    plt.savefig(output_jaccard_census_results_path)
 
-
-def run_census_cosine(census_data_csv_path, output_cosine_census_results_path): 
+def run_census_cosine(census_data_csv_path, cosine_census_plot_name): 
     """
-    census_data_csv_path : should be the one after run_census 
-    output_cosine_census_results_path : should indicate which data processor this is being done for 
+    census_data_csv_path : should be the one after run_census - will be in the census_retrieved_data folder
+    output_cosine_census_results_path : just the name of the jaccard plot - should be .png and indicate data processor
     """
     census_data = pd.read_csv(census_data_csv_path) 
     
@@ -716,9 +741,10 @@ def run_census_cosine(census_data_csv_path, output_cosine_census_results_path):
     sns.heatmap(cosine_sim_df, annot=True, cmap="Blues", cbar=True, xticklabels=True, yticklabels=True)
     plt.title('State Similarity Based on Clusters (Cosine Similarity)')
     
-    # Save the heatmap as a PNG file
-    output_file = os.path.join(repo_root, output_cosine_census_results_path)
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    # Save the plot as a PNG file
+    output_folder = os.path.join(repo_root, "census_image_results")
+    os.makedirs(output_folder, exist_ok=True)
+    output_file = os.path.join(repo_root, cosine_census_plot_name)
     plt.savefig(output_file)
 
         
