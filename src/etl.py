@@ -36,7 +36,47 @@ from sklearn.metrics import (
     accuracy_score
 )
 
-from tensorflow.keras.regularizers import Regularizerfrom folktables import ACSDataSource, ACSIncome, ACSEmployment, ACSPublicCoverage
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import GlobalAveragePooling2D
+import os
+import pandas as pd
+from tqdm import tqdm
+from keras.models import load_model
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers, regularizers
+from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.layers import (
+    Input, Dense, Conv2D, Flatten, 
+    MaxPooling2D, BatchNormalization, Dropout
+)
+
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.callbacks import (
+    EarlyStopping,
+    ModelCheckpoint,
+    LearningRateScheduler
+)
+from tensorflow.keras.initializers import RandomUniform
+from tensorflow.keras.regularizers import l1, l2
+from tensorflow.keras.constraints import Constraint
+from tensorflow.keras.optimizers import Adam
+from keras.initializers import Constant
+
+from tensorflow.keras.datasets import mnist
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import (
+    confusion_matrix,
+    roc_auc_score,
+    accuracy_score
+)
+
+from tensorflow.keras.regularizers import Regularizer
+
+from tensorflow.keras.regularizers import Regularizer 
+from folktables import ACSDataSource, ACSIncome, ACSEmployment, ACSPublicCoverage
 from sklearn.preprocessing import LabelEncoder
 from tensorflow.keras.models import Sequential, Model
 from keras.models import load_model
@@ -57,6 +97,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from PIL import Image
+import os
+
+# This will be used when saving the files
+repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 ### Retrieving Datasets 
 def retrieve_adult_data():
@@ -428,7 +472,7 @@ def get_model_z(X,s,n_z,model_name,epochs=20,verbose=1,var_reg=0.0):
     ])
     optimizer = Adam(learning_rate=1e-3) # an adaptive learning rate optimizer
     model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
-    model_checkpoint_path = model_name
+    model_checkpoint_path = os.path.join(repo_root, model_checkpoint_path)
 
     model_checkpoint_callback = ModelCheckpoint(
         filepath=model_checkpoint_path,
@@ -437,8 +481,7 @@ def get_model_z(X,s,n_z,model_name,epochs=20,verbose=1,var_reg=0.0):
         mode='min',
         verbose=verbose
     )
-    print(model.get_weights()[-1])
-
+    
     model.fit(
         X,
         s,
@@ -468,39 +511,49 @@ def set_seed(seed_num):
     np.random.seed(seed)
     tf.random.set_seed(seed)
 
-def retrieve_features(dataset_path, features_path):
+def visualization_images(p_value, y_value, dataset_path):
+    """
+    Visualizes a 2x2 grid of images based on specified filtering conditions.
+    """
+    selected_indices = np.random.choice(len(file_paths[(p==p_value)&(np.squeeze(y)==y_value)]), 4, replace=False)
+    selected_file_paths = file_paths[(p==p_value)&(np.squeeze(y)==y_value)][selected_indices]
+    
+    fig, axes = plt.subplots(2, 2, figsize=(10, 10))
+    
+    for ax, file_path in zip(axes.flatten(), selected_file_paths):
+        img = Image.open(dataset_path + file_path)
+        ax.imshow(img)
+        ax.axis('off')  
+    
+    plt.tight_layout()
+
+    # Save the plot as a PNG file
+    output_folder = os.path.join(repo_root, "waterbirds_image_results")
+    os.makedirs(output_folder, exist_ok=True)
+
+    output_file_path = os.path.join(output_folder, f"{p_value}_{y_value}.png")
+
+    plt.savefig(f"{output_folder}{p_value}_{y_value}.png", dpi=300)
+
+def retrieve_features(dataset_path):
     metadata_file = os.path.join(dataset_path, 'metadata.csv')
     metadata_df = pd.read_csv(metadata_file)
 
     features = process_images_in_batches(dataset_path, metadata_df)
-    np.save(features_path, features)
 
-def visualization_images(p_value, y_value, dataset_path):
-        """
-        Visualizes a 2x2 grid of images based on specified filtering conditions.
-        """
-        selected_indices = np.random.choice(len(file_paths[(p==p_value)&(np.squeeze(y)==y_value)]), 4, replace=False)
-        selected_file_paths = file_paths[(p==p_value)&(np.squeeze(y)==y_value)][selected_indices]
-        
-        fig, axes = plt.subplots(2, 2, figsize=(10, 10))
-        
-        for ax, file_path in zip(axes.flatten(), selected_file_paths):
-            img = Image.open('data/Waterbirds_dataset/waterbird_complete95_forest2water2/' + file_path)
-            ax.imshow(img)
-            ax.axis('off')  
-        
-        plt.tight_layout()
-    
-        # Save the plot as a PNG file
-        plt.savefig(f"selected_images_{p_value}_{y_value}.png", dpi=300)
-    
+    output_folder = os.path.join(repo_root, "waterbirds_features")
+    os.makedirs(output_folder, exist_ok=True)
 
+    output_file_path = os.path.join(output_folder, "features.npy")
+    
+    np.save(output_folder, features)
 # ===========================
-# Waterbirds Path
+# Waterbirds Run
 # ===========================
-def run_waterbirds(dataset_path, features_path, output_csv_path, num_clusters=2, num_epochs=60, model_path='best_model_inc.h5', , num_var_reg=0, seed_num=0): 
+def run_waterbirds(dataset_path, output_csv_path, num_clusters=2, num_epochs=60, model_path='best_wb_model_inc.h5', num_var_reg=0, seed_num=0): 
     set_seed(seed_num)
-    
+
+    features_path = os.path.join(repo_root, "waterbirds_features/features.npy")
     metadata_file = os.path.join(dataset_path, 'metadata.csv')
     metadata_df = pd.read_csv(metadata_file)
     s = metadata_df['split'].values 
@@ -548,8 +601,9 @@ def run_waterbirds(dataset_path, features_path, output_csv_path, num_clusters=2,
     )
 
     # Save the DataFrame to a CSV file
-    output_csv = output_csv_path
-    p_y_place_df.to_csv(output_csv, index=False)
+    output_file = os.path.join(repo_root, output_csv_path)
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    p_y_place_df.to_csv(output_csv_path, index=False)
 
 
     # Doing all the combination to see what it should be
@@ -564,7 +618,7 @@ def run_waterbirds(dataset_path, features_path, output_csv_path, num_clusters=2,
 # Census Data Set
 # ===========================
 
-def run_census(data_processor, dataset_path, features_path, output_csv_path, num_clusters=4, num_epochs=60, model_path='best_census_model_inc.h5', , num_var_reg=0, seed_num=0):
+def run_census(data_processor, output_csv_path, num_clusters=4, num_epochs=60, model_path='best_census_model_inc.h5', num_var_reg=0, seed_num=0):
     
     set_seed(seed_num)
     features, labels, states_from_df = load_census_data(data_processor)
@@ -585,27 +639,19 @@ def run_census(data_processor, dataset_path, features_path, output_csv_path, num
         processor_type = "not_identified" 
 
     cluster_state_df = pd.DataFrame({
-        "p1_tr":p1_tr,
+        "cluster":p1_tr,
         "states":states_from_df, 
         "type": "public_coverage"
         }
         )
 
-    output_csv = output_csv_path
-    cluster_state_df.to_csv(output_csv, index=False)
-
-def save_census_data(census_data_csv_path, output_path): 
-    """
-    census_data_csv_path : should be what is outputed from run_csv
-    output_path: should indicate which data processor was used
-    """
-    census_data = pd.read_csv(census_data_csv_path) 
-    census_data = census_data.rename(columns={"p1_tr":"cluster"})
-    census_data.to_csv(output_csv, index=False)
+    output_file = os.path.join(repo_root, output_csv_path)
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    cluster_state_df.to_csv(output_csv_path, index=False)
 
 def run_census_jaccard(census_data_csv_path, output_jaccard_census_results_path): 
     """
-    census_data_csv_path : should be the one after save_census_data 
+    census_data_csv_path : should be the one after run_census 
     output_jaccard_census_results_path : should indicate which data processor this is being done for 
     """
     census_data = pd.read_csv(census_data_csv_path) 
@@ -626,14 +672,16 @@ def run_census_jaccard(census_data_csv_path, output_jaccard_census_results_path)
     sns.heatmap(jaccard_sim_df, annot=True, cmap="Blues", cbar=True, xticklabels=True, yticklabels=True)
     plt.title('State Similarity Based on Clusters (Jaccard Similarity)')
 
-    # Save the heatmap as a PNG file
-    plt.savefig(f"{output_jaccard_census_results_path}.png")
-    plt.show()
+    output_file = os.path.join(repo_root, output_jaccard_census_results_path)
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    plt.savefig(output_file)
+
+    plt.savefig(output_jaccard_census_results_path)
 
 
 def run_census_cosine(census_data_csv_path, output_cosine_census_results_path): 
     """
-    census_data_csv_path : should be the one after save_census_data 
+    census_data_csv_path : should be the one after run_census 
     output_cosine_census_results_path : should indicate which data processor this is being done for 
     """
     census_data = pd.read_csv(census_data_csv_path) 
@@ -650,17 +698,15 @@ def run_census_cosine(census_data_csv_path, output_cosine_census_results_path):
     # Convert the result to a DataFrame for better readability
     cosine_sim_df = pd.DataFrame(cosine_sim_matrix, index=state_cluster_matrix.index, columns=state_cluster_matrix.index)
     
-    # # Display the cosine similarity matrix
-    # print(cosine_sim_df)
-    
     # Plotting the Jaccard similarity matrix as a heatmap
     plt.figure(figsize=(10, 8))
     sns.heatmap(cosine_sim_df, annot=True, cmap="Blues", cbar=True, xticklabels=True, yticklabels=True)
     plt.title('State Similarity Based on Clusters (Cosine Similarity)')
     
     # Save the heatmap as a PNG file
-    plt.savefig(f"{output_cosine_census_results_path}.png")
-    plt.show()
+    output_file = os.path.join(repo_root, output_cosine_census_results_path)
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    plt.savefig(output_file)
 
         
 
