@@ -17,22 +17,40 @@ from etl import (
     retrieve_features,
     run_waterbirds, 
     run_census, 
+    download_waterbirds_data
     
 )
     
     
 if __name__ == '__main__':
     args = sys.argv[1:]
-    if 'census_model' in args: 
-        print("census")
-
-    if 'waterbirds_features' in args:
-        with open("config/waterbirds_extract_features.json", "r") as file:
+    if 'census_income_model' in args: 
+        with open("config/census_income.json", "r") as file:
             config = json.load(file)
-        retrieve_features(**config)
+        run_census(**config)
+        
+    if 'census_employment_model' in args: 
+        with open("config/census_employment.json", "r") as file:
+            config = json.load(file)
+        run_census(**config)
+
+    if 'census_public_coverage_model' in args: 
+        with open("config/census_public_coverage.json", "r") as file:
+            config = json.load(file)
+        run_census(**config)
+
+    if "download_wb_data" in args: 
+        with open("config/waterbirds_download_data.json", "r") as file:
+            config = json.load(file)
+        download_wb_data(**config)
+        
+    if 'waterbirds_features' in args:
+        retrieve_wb_features()
 
     if 'waterbirds_model' in args:
-        print("wb")
+        with open("config/waterbirds_run_data.json", "r") as file:
+            config = json.load(file)
+        run_waterbirds(**config)
 
 
     # COME BACK AND UPDATE
