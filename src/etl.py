@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
+from sklearn.preprocessing import MinMaxScaler
 
 from tensorflow.keras.layers import (
     Input, Dense, Conv2D, Flatten, 
@@ -92,6 +93,8 @@ import random
 
 from sklearn.metrics import pairwise_distances
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -617,6 +620,9 @@ def run_waterbirds(output_csv_name, output_model_results, num_clusters=2, num_ep
         axis=1
     )
 
+    
+
+
     # Save the DataFrame to a CSV file
     output_folder = os.path.join(repo_root, "wb_retrieved_data")
     os.makedirs(output_folder, exist_ok=True)
@@ -626,28 +632,24 @@ def run_waterbirds(output_csv_name, output_model_results, num_clusters=2, num_ep
 
     ## EVALUATION OF MODEL OUTPUT
 
-    # for both clusters -- look at where y and place are the same
-    all_equal = (p_y_place_df["cluster"] == p_y_place_df["place"]) & \
-            (p_y_place_df["cluster"] == p_y_place_df["y"])
-    prop_correct = all_equal.sum() / p_y_place_df.shape[0]
-
-    # Calculate the total number of rows
-    total_rows = p_y_place_df.shape[0]
+    # Creating a new column where the condition y == place is checked
+    p_y_place_df['y_equals_place'] = p_y_place_df['y'] == p_y_place_df['place']
     
-    # Calculate the proportion for each unique cluster
-    prop_per_cluster = (
-        p_y_place_df["cluster"].value_counts(normalize=True).to_dict()
+    # Group by 'cluster' and calculate the proportion
+    proportions = (
+        p_y_place_df.groupby('cluster')['y_equals_place']
+        .mean()  # Mean of True/False (1/0) gives the proportion
+        .reset_index(name='proportion_y_equals_place')
     )
-    
+
     output_model_folder = os.path.join(repo_root, "model_results")
     os.makedirs(output_folder, exist_ok=True)
     output_txt_path = os.path.join(output_folder, output_model_results)
     with open(output_txt_path, "w") as file:
         # Proportions for each cluster
-        file.write(f"Proportion Correctly Matched: {prop_correct}\n")
-        file.write("Proportions for Each Cluster:\n")
-        for cluster, proportion in prop_per_cluster.items():
-            file.write(f"Cluster {cluster}: {proportion:.4f}\n")
+        file.write("Proportion Accuracy Where Y=Place:\n")
+        for _, row in proportions.iterrows():
+            file.write(f"Cluster {row['cluster']}: {row['proportion_y_equals_place']:.4f}\n")
 
 
     # Doing all the combination to see what it should be
