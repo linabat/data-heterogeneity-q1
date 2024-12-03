@@ -76,12 +76,18 @@ The steps to process these datasets are the same for all three data processors. 
 ### Steps for Processing ACSIncome
 
 1. **Run the Model** 
-   Run ```bash python run.py census_income_model``` in terminal
+   Run in terminal
+   ```bash
+   python run.py census_income_model
+   ```
     - This will output csv with the clusters for each row in `census_retrieved_data`
     - In `model_results` folder, will be able to see the states the belong to each cluster.
     - The number of clusters can be changed in the config file (in this case, the file is `config/census_income.json`)
-2. **Visualize Cosine Similarity**
-   To run cosine similarity to visually see the similarities between the states, run ```bash python run.py census_income_cosine```
+3. **Visualize Cosine Similarity**
+   To run cosine similarity to visually see the similarities between the states, run
+   ```bash
+   python run.py census_income_cosine
+   ```
     - The output plot will be saved in the `census_image_results` folder
 
 #### Running ACSEmployment and ACSPublicCoverage
