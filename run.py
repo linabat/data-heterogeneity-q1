@@ -18,7 +18,6 @@ from etl import (
     run_waterbirds, 
     run_census, 
     download_wb_data,
-    run_census_jaccard,
     run_census_cosine
     
 )
@@ -30,11 +29,6 @@ if __name__ == '__main__':
         with open("config/census_income.json", "r") as file:
             config = json.load(file)
         run_census(**config)
-
-    if 'census_income_jaccard' in args: 
-        with open("config/census_income_jaccard.json", "r") as file:
-            config = json.load(file)
-        run_census_jaccard(**config)
         
     if 'census_income_cosine' in args: 
         with open("config/census_income_cosine.json", "r") as file:
@@ -45,11 +39,21 @@ if __name__ == '__main__':
         with open("config/census_employment.json", "r") as file:
             config = json.load(file)
         run_census(**config)
+        
+    if 'census_employment_cosine' in args: 
+        with open("config/census_employment_cosine.json", "r") as file:
+            config = json.load(file)
+        run_census_cosine(**config)
 
     if 'census_public_coverage_model' in args: 
         with open("config/census_public_coverage.json", "r") as file:
             config = json.load(file)
         run_census(**config)
+
+    if 'census_public_coverage_cosine' in args: 
+        with open("config/census_public_coverage_cosine.json", "r") as file:
+            config = json.load(file)
+        run_census_cosine(**config)
 
     if "download_wb_data" in args: 
         with open("config/waterbirds_download_data.json", "r") as file:
