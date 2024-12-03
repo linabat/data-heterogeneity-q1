@@ -372,6 +372,9 @@ def load_census_data(data_processor):
     Load and process census data.
     @param data_processor: ACSIncome, ACSEmployment, ACSPublicCoverage 
     """
+
+    ## GRAB ONLY CERTAIN AMOUNT FROM EACH STATE
+    ## FOR EACH STATE, APPLY MIN, MAX SCALER (both)
     states = ['AK','AL','AR','AZ','CA','CO','CT','DC','DE','FL','GA','HI','IA','ID','IL','IN','KS','KY','LA',
         'MA','MD','ME','MI','MN','MO','MS','MT','NC','ND','NH','NJ','NM','NY','NV','OH','OK','OR','PA','PR',
         'RI','SC','SD','TN','TX','UT','VA','VT','WA','WI','WV','WY']
@@ -622,6 +625,8 @@ def run_waterbirds(output_csv_name, output_model_results, num_clusters=2, num_ep
 
 
     ## EVALUATION OF MODEL OUTPUT
+
+    # for both clusters -- look at where y and place are the same
     all_equal = (p_y_place_df["cluster"] == p_y_place_df["place"]) & \
             (p_y_place_df["cluster"] == p_y_place_df["y"])
     prop_correct = all_equal.sum() / p_y_place_df.shape[0]
@@ -655,30 +660,34 @@ def run_waterbirds(output_csv_name, output_model_results, num_clusters=2, num_ep
 # Census Data Set
 # ===========================
 
-def run_census(data_processor, output_csv_name, num_clusters=4, num_epochs=60, model_path='best_census_model_inc.h5', num_var_reg=0, seed_num=0):
+def run_census(data_processor_type, output_csv_name, num_clusters=4, num_epochs=60, model_path='best_census_model_inc.h5', num_var_reg=0, seed_num=0):
     
     set_seed(seed_num)
-    features, labels, states_from_df = load_census_data(data_processor)
-    s1 = to_categorical(labels)
-    p1_tr = pzx(features, best_model, arg_max=True)
 
-    processor_type = ""
-    if data_processor == ACSIncome: 
-        processor_type = "income"
+    if data_processor_type == "income": 
+        data_processor = ACSIncome
 
-    elif data_processor == ACSEmployment: 
-        processor_type = "employment" 
+    elif data_processor_type == "employment": 
+        data_processor = ACSEmployment
 
-    elif data_processor == ACSPublicCoverage: 
-        processor_type = "public_coverage" 
+    elif data_processor_type == "public_coverage": 
+        data_processor =  ACSPublicCoverage
 
     else: 
-        processor_type = "not_identified" 
+        raise ValueError(f"Invalid data_processor_type '{data_processor_type}'. Must be one of: 'income', 'employment', or 'public_coverage'.")
 
+    
+    features, labels, states_from_df = load_census_data(data_processor)
+    s1 = to_categorical(labels)
+    best_model = get_model_z(features, s1, 4, model_path, epochs=40, var_reg=0)
+
+    p1_tr = pzx(features, best_model, arg_max=True)
+
+    
     cluster_state_df = pd.DataFrame({
         "cluster":p1_tr,
         "states":states_from_df, 
-        "type": processor_type
+        "type": data_processor_type
         }
         )
 
@@ -714,11 +723,11 @@ def run_census_jaccard(census_data_csv_path, jaccard_census_path_name):
     # Save the plot as a PNG file
     output_folder = os.path.join(repo_root, "census_image_results")
     os.makedirs(output_folder, exist_ok=True)
-    output_file = os.path.join(repo_root, jaccard_census_path_name)
+    output_file = os.path.join(output_folder, jaccard_census_path_name)
     plt.savefig(output_file)
 
 
-def run_census_cosine(census_data_csv_path, cosine_census_plot_name): 
+def run_census_cosine(census_data_csv_path, cosine_census_path_name): 
     """
     census_data_csv_path : should be the one after run_census - will be in the census_retrieved_data folder
     output_cosine_census_results_path : just the name of the jaccard plot - should be .png and indicate data processor
@@ -745,7 +754,7 @@ def run_census_cosine(census_data_csv_path, cosine_census_plot_name):
     # Save the plot as a PNG file
     output_folder = os.path.join(repo_root, "census_image_results")
     os.makedirs(output_folder, exist_ok=True)
-    output_file = os.path.join(repo_root, cosine_census_plot_name)
+    output_file = os.path.join(output_folder, cosine_census_path_name)
     plt.savefig(output_file)
 
         
