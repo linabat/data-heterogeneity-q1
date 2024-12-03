@@ -1,0 +1,7 @@
+name: data-heterogeneity-q1
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11.9
+  - gmpy2
+prefix: /home/lbattikha/.conda/envs/data-heterogeneity-q1
