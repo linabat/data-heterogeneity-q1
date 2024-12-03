@@ -370,21 +370,20 @@ def process_images_in_batches(dataset_path, metadata_df, batch_size=32):
 
 # Census Pre-Processing
 
-def load_census_data(data_processor):
+def load_census_data(data_processor, seed_num=0):
     """
     Load and process census data.
     @param data_processor: ACSIncome, ACSEmployment, ACSPublicCoverage 
     """
+    set_seed(seed_num)
 
-    ## GRAB ONLY CERTAIN AMOUNT FROM EACH STATE
-    ## FOR EACH STATE, APPLY MIN, MAX SCALER (both)
     states = ['AK','AL','AR','AZ','CA','CO','CT','DC','DE','FL','GA','HI','IA','ID','IL','IN','KS','KY','LA',
         'MA','MD','ME','MI','MN','MO','MS','MT','NC','ND','NH','NJ','NM','NY','NV','OH','OK','OR','PA','PR',
         'RI','SC','SD','TN','TX','UT','VA','VT','WA','WI','WV','WY']
     
-    
     data_source = ACSDataSource(survey_year='2018', horizon='1-Year', survey='person')
     all_data = pd.DataFrame()
+    state_row_counts = {}
 
     for state in states: 
         try:
@@ -392,19 +391,37 @@ def load_census_data(data_processor):
             state_features, _, _ = data_processor.df_to_numpy(state_data)
             state_features_df = pd.DataFrame(state_features)
             state_features_df['ST'] = state
+            state_row_counts[state] = state_features_df.shape[0]
             all_data = pd.concat([all_data, state_features_df], ignore_index=True)
         except Exception as e: 
             continue
 
+    ## GRAB ONLY CERTAIN AMOUNT FROM EACH STATE
+    ## FOR EACH STATE, APPLY MIN, MAX SCALER (both)
+    
+    min_row_count = min(state_row_counts.values())
+    # Sample the minimum number of rows for each state
+    balanced_data = pd.DataFrame()
+    for state in states:
+        state_data = all_data[all_data['ST'] == state]
+        if len(state_data) >= min_row_count:
+            sampled_data = state_data.sample(n=min_row_count)
+            balanced_data = pd.concat([balanced_data, sampled_data], ignore_index=True)
+
     # Encode state labels
     label_encoder = LabelEncoder()
-    states_from_df = all_data["ST"].to_numpy()
-    all_data['ST_encoded'] = label_encoder.fit_transform(all_data['ST'])
-    labels = all_data["ST_encoded"].to_numpy()
-    features = all_data.drop(columns=["ST", "ST_encoded"]).to_numpy()
+    states_from_df = balanced_data["ST"].to_numpy()
+    balanced_data['ST_encoded'] = label_encoder.fit_transform(balanced_data['ST'])
+    labels = balanced_data["ST_encoded"].to_numpy()
+    
+    features = balanced_data.drop(columns=["ST", "ST_encoded"]).to_numpy()
+    standard_scaler = StandardScaler()
+    features_standardized = standard_scaler.fit_transform(features)
 
-    return features, labels, states_from_df
+    minmax_scaler = MinMaxScaler()
+    features_scaled = minmax_scaler.fit_transform(features_standardized)
 
+    return features_scaled, labels, states_from_df
 
 # Clustering method - Parjanya's code 
 
@@ -542,7 +559,7 @@ def visualization_images(file_paths, p, y, p_value, y_value, dataset_path):
 
     plt.savefig(output_file_path, dpi=300)
     
-def download_wb_data(tar_file_path): # CHECKED AND GOOD
+def download_wb_data(tar_file_path): 
     tar_file_path = os.path.join(repo_root, tar_file_path)
     extract_path = os.path.join(repo_root, "waterbirds_data")
     # Create the extraction directory if it doesn't exist
@@ -553,7 +570,7 @@ def download_wb_data(tar_file_path): # CHECKED AND GOOD
         tar.extractall(path=extract_path)
         print(f"Extracted contents to: {extract_path}")
         
-def retrieve_wb_features(): # CHECKED AND GOOD
+def retrieve_wb_features(): 
     # Know this path cause this is where images were saved from download_waterbirds_data function
     dataset_path = os.path.join(repo_root, "waterbirds_data/waterbird_complete95_forest2water2")
     metadata_file = os.path.join(dataset_path, 'metadata.csv')
@@ -620,9 +637,6 @@ def run_waterbirds(output_csv_name, output_model_results, num_clusters=2, num_ep
         axis=1
     )
 
-    
-
-
     # Save the DataFrame to a CSV file
     output_folder = os.path.join(repo_root, "wb_retrieved_data")
     os.makedirs(output_folder, exist_ok=True)
@@ -643,8 +657,8 @@ def run_waterbirds(output_csv_name, output_model_results, num_clusters=2, num_ep
     )
 
     output_model_folder = os.path.join(repo_root, "model_results")
-    os.makedirs(output_folder, exist_ok=True)
-    output_txt_path = os.path.join(output_folder, output_model_results)
+    os.makedirs(output_model_folder, exist_ok=True)
+    output_txt_path = os.path.join(output_model_folder, output_model_results)
     with open(output_txt_path, "w") as file:
         # Proportions for each cluster
         file.write("Proportion Accuracy Where Y=Place:\n")
@@ -662,7 +676,7 @@ def run_waterbirds(output_csv_name, output_model_results, num_clusters=2, num_ep
 # Census Data Set
 # ===========================
 
-def run_census(data_processor_type, output_csv_name, num_clusters=4, num_epochs=60, model_path='best_census_model_inc.h5', num_var_reg=0, seed_num=0):
+def run_census(data_processor_type, output_csv_name, output_model_results, num_clusters=4, num_epochs=60, model_path='best_census_model_inc.h5', num_var_reg=0, seed_num=0):
     
     set_seed(seed_num)
 
@@ -699,34 +713,31 @@ def run_census(data_processor_type, output_csv_name, num_clusters=4, num_epochs=
     output_csv_path = os.path.join(output_folder, output_csv_name)
     cluster_state_df.to_csv(output_csv_path, index=False)
 
-def run_census_jaccard(census_data_csv_path, jaccard_census_path_name): 
-    """
-    census_data_csv_path : should be the one after run_census - will be in the census_retrieved_data folder
-    output_jaccard_census_results_path : just the name of the jaccard plot - should be .png and indicate data processor
-    """
-    census_data = pd.read_csv(census_data_csv_path) 
-    # Create a binary matrix for the clusters (1 if the state belongs to the cluster, 0 otherwise)
-    state_cluster_matrix = pd.pivot_table(census_data, index='states', columns='cluster', aggfunc=lambda x: 1, fill_value=0)
+    # Group by 'states' and 'cluster', then count the occurrences of each cluster for each state
+    cluster_counts = cluster_state_df.groupby(["states", "cluster"]).size().reset_index(name='count')
     
-    # Convert to a numpy array to calculate distances
-    state_cluster_matrix_array = state_cluster_matrix.values
+    # Calculate the total count for each state
+    state_totals = cluster_state_df.groupby("states")["cluster"].count().reset_index(name='total')
     
-    # Calculate the pairwise Jaccard similarity between states (1 - Jaccard distance)
-    jaccard_sim_matrix = 1 - pairwise_distances(state_cluster_matrix_array, metric='jaccard')
+    # Merge the counts with the total counts per state
+    merged = pd.merge(cluster_counts, state_totals, on="states")
     
-    # Convert the result to a DataFrame for better readability
-    jaccard_sim_df = pd.DataFrame(jaccard_sim_matrix, index=state_cluster_matrix.index, columns=state_cluster_matrix.index)
-    
-    # Plotting the Jaccard similarity matrix as a heatmap
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(jaccard_sim_df, annot=True, cmap="Blues", cbar=True, xticklabels=True, yticklabels=True)
-    plt.title('State Similarity Based on Clusters (Jaccard Similarity)')
+    # Calculate the proportion for each cluster within each state
+    merged['proportion'] = merged['count'] / merged['total']
+    result = merged.loc[merged.groupby("states")["proportion"].idxmax()]
+    cluster_groups = result.groupby("cluster")["states"].apply(list)
 
-    # Save the plot as a PNG file
-    output_folder = os.path.join(repo_root, "census_image_results")
-    os.makedirs(output_folder, exist_ok=True)
-    output_file = os.path.join(output_folder, jaccard_census_path_name)
-    plt.savefig(output_file)
+
+
+    output_model_folder = os.path.join(repo_root, "model_results")
+    os.makedirs(output_model_folder, exist_ok=True)
+    output_txt_path = os.path.join(output_model_folder, output_model_results)
+    with open(output_txt_path, "w") as file:
+        file.write("State - Cluster Mapping Based on Highest Proportion:\n")
+        file.write("=" * 50 + "\n\n")
+        for cluster, states in cluster_groups.items():
+            state_list = ", ".join(states)
+            file.write(f"Cluster {cluster}: = [{state_list}]\n")
 
 
 def run_census_cosine(census_data_csv_path, cosine_census_path_name): 
@@ -736,9 +747,12 @@ def run_census_cosine(census_data_csv_path, cosine_census_path_name):
     """
     census_data = pd.read_csv(census_data_csv_path) 
     
-    # Create a binary matrix for the clusters (1 if the state belongs to the cluster, 0 otherwise)
-    state_cluster_matrix = pd.pivot_table(census_data, index='states', columns='cluster', aggfunc=lambda x: 1, fill_value=0)
-
+    # Rename column if necessary
+    census_data = census_data.rename(columns={"p1_tr": "cluster"})
+    
+    # Create a binary matrix for states and clusters
+    state_cluster_matrix = pd.crosstab(census_data['states'], census_data['cluster'])
+    
     # Convert to a numpy array to calculate distances
     state_cluster_matrix_array = state_cluster_matrix.values
     
@@ -748,9 +762,9 @@ def run_census_cosine(census_data_csv_path, cosine_census_path_name):
     # Convert the result to a DataFrame for better readability
     cosine_sim_df = pd.DataFrame(cosine_sim_matrix, index=state_cluster_matrix.index, columns=state_cluster_matrix.index)
     
-    # Plotting the Jaccard similarity matrix as a heatmap
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(cosine_sim_df, annot=True, cmap="Blues", cbar=True, xticklabels=True, yticklabels=True)
+    # Plot the cosine similarity matrix as a heatmap
+    plt.figure(figsize=(15, 8))
+    sns.heatmap(cosine_sim_df, annot=False, cmap="Blues", cbar=True, xticklabels=True, yticklabels=True)
     plt.title('State Similarity Based on Clusters (Cosine Similarity)')
     
     # Save the plot as a PNG file
