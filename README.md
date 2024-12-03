@@ -9,10 +9,12 @@ Let's start by looking at the results for the waterbirds dataset. This dataset c
 1. To download the waterbirds dataset, [click this link]. Place the .tar.gz file in the cloned repo and save the path to this file.
 2. Go into the `config` folder and past the relative path for where you saved the .tar.gz file into your repo - will be the value of the key`tar_file_path` in the json value.
 3. In your terminal, in the repo directory run `python run.py download_wb_data` -> This will create a folder in your repo called `waterbirds_data`, where all the image data for the waterbirds dataset is stored
-4. To retrieve the features need in order to run the model, in terminal, run `python run.py waterbirds_features` -> This will create a folder `waterbirds_features` that will store s `features.npy` file.
-5. Now that everything has been processed for the 
+4. To retrieve the features need in order to run the model, in terminal, run `python run.py waterbirds_features` -> This will create a folder `waterbirds_features` that will store the `features.npy` file.
+5. Now that everything has been processed, the model can be run on the dataset by running `python run waterbirds_run_data` in the terminal --> This will output the images for the different clustering permutations, stored in teh `waterbirds_image_results` folder. It will also output the csv retrieve with the predicted cluster, stored in the `wb_retrieved_data` folder. Finally, you can can see how well our model is doing by looking at the results outputted in the `model_results` folder.
 
+Here are our results for the waterbirds dataset. INSERT RESULTS HERE.
 
+Moving on, let's take a look at the other 3 datasets which come from the same [source](https://github.com/socialfoundations/folktables). 
 
 
 Building the project stages using run.py.
