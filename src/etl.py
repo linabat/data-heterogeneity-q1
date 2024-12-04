@@ -186,10 +186,13 @@ def gmm_adults(gmm_adult_ts):
 
     mapped_y_pred = [0 if label == y_test.mode()[0] else 1 for label in y_pred]
     
-    print("Accuracy:", accuracy_score(y_test, y_pred))
-    print(classification_report(y_test, y_pred))
-    
-    return 
+    output_model_folder = os.path.join(repo_root, "gmm_kmeans_results")
+    os.makedirs(output_model_folder, exist_ok=True)
+    output_txt_path = os.path.join(output_model_folder, output_model_results)
+    with open(output_txt_path, "w") as file:
+        # Proportions for each cluster
+        file.write(f"Accuracy: {accuracy_score(y_test, y_pred)}\n")
+        file.write(f"Classification Report: {classification_report(y_test, y_pred)}\n")
 
 def gmm_covid(covid_fp, replace_num, gmm_covid_ts): 
     """
@@ -236,10 +239,13 @@ def gmm_covid(covid_fp, replace_num, gmm_covid_ts):
     # Map predictions to 0 or 1 based on the most common label in y_test
     mapped_y_pred = [0 if label == y_test[0] else 1 for label in y_pred]
 
-    # Evaluate performance
-    print("Accuracy:", accuracy_score(y_test, mapped_y_pred))
-
-    print("Classification Report:\n", classification_report(y_test, mapped_y_pred))
+    output_model_folder = os.path.join(repo_root, "gmm_kmeans_results")
+    os.makedirs(output_model_folder, exist_ok=True)
+    output_txt_path = os.path.join(output_model_folder, output_model_results)
+    with open(output_txt_path, "w") as file:
+        # Proportions for each cluster
+        file.write(f"Accuracy: {accuracy_score(y_test, mapped_y_pred)}\n")
+        file.write(f"Classification Report: {classification_report(y_test, mapped_y_pred)}\n")
     
     return X_scaled
 
@@ -279,9 +285,13 @@ def plot_pca_gmm_covid():
     ax2.legend(title='Original Class')
 
     plt.tight_layout()
-    plt.show()
-    
-    return 
+    # Save the plot as a PNG file
+    output_model_folder = os.path.join(repo_root, "gmm_kmeans_results")
+    os.makedirs(output_folder, exist_ok=True)
+
+    output_file_path = os.path.join(output_folder, "gmm_covid_pca")
+
+    plt.savefig(output_file_path, dpi=300)
 
 
 ### KMeans
@@ -318,7 +328,14 @@ def kmeans_adults():
     plt.xlabel("PCA Component 1")
     plt.ylabel("PCA Component 2")
     plt.legend()
-    plt.show()
+
+    # Save the plot as a PNG file
+    output_model_folder = os.path.join(repo_root, "gmm_kmeans_results")
+    os.makedirs(output_folder, exist_ok=True)
+
+    output_file_path = os.path.join(output_folder, "kmeans_adults")
+
+    plt.savefig(output_file_path, dpi=300)
 
 
 # Image Pre-Processing 
