@@ -22,7 +22,6 @@ from etl import (
     
 )
     
-    
 if __name__ == '__main__':
     args = sys.argv[1:]
     # CENSUS
@@ -104,13 +103,13 @@ if __name__ == '__main__':
 
     # KMeans and GMMs
     if 'gmm_adults' in args: 
-        with open('config/data-params.json') as fh:
+        with open('config/covid.json') as fh:
             data_params = json.load(fh)
         
         gmm_adults(data_params["gmm_adult_ts"])
 
     if 'gmm_covid' in args:
-        with open('config/data-params.json') as fh:
+        with open('config/covid.json') as fh:
             data_params = json.load(fh)
         
         gmm_covid(
@@ -120,11 +119,31 @@ if __name__ == '__main__':
     )
         
     if 'plot_gmm_covid' in args: 
-        with open('config/data-params.json') as fh:
+        with open('config/covid.json') as fh:
             data_params = json.load(fh)
-        plot_pca_gmm_covid()
+            plot_pca_gmm_covid(
+        data_params["covid_fp"],
+        data_params["replace_num"],
+        data_params["gmm_covid_ts"]
+            )
+    if 'gmm_test' in args: 
+        with open('config/test_data.json') as fh:
+            data_params = json.load(fh)
+            gmm_covid(
+        data_params["covid_fp"],
+        data_params["replace_num"],
+        data_params["gmm_covid_ts"], 
+                test_data=True
+    )
+
+            plot_pca_gmm_covid(
+        data_params["covid_fp"],
+        data_params["replace_num"],
+        data_params["gmm_covid_ts"], 
+                test_data=True
+            )
 
     if 'kmeans_adults' in args:
-        with open('config/data-params.json') as fh:
+        with open('config/covid.json') as fh:
             data_params = json.load(fh)
         kmeans_adults()
