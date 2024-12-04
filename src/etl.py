@@ -13,6 +13,9 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import MinMaxScaler
 
+from sklearn.datasets import fetch_openml
+import seaborn as sns
+
 from tensorflow.keras.layers import (
     Input, Dense, Conv2D, Flatten, 
     MaxPooling2D, BatchNormalization, Dropout
@@ -107,60 +110,31 @@ import tarfile
 # This will be used when saving the files
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-### Retrieving Datasets 
-def retrieve_adult_data():
-    """
-    This function is used to retrieve UCI's adult dataset
-    """
-    # Fetch dataset 
-    adult = fetch_ucirepo(id=2) 
 
-    # Data (as pandas dataframes) 
-    X = adult.data.features 
-    y = adult.data.targets 
-    
-    # Cleaning target values
-    y.replace("<=50K.", "<=50K", inplace=True)
-    y.replace(">50K.", ">50K", inplace=True)
-    
-    # Group the original dataset for how it was 
-    full_data = pd.concat([X,y], axis = 1)
-
-    # Breaking up the groups so can  do undersampling for greather than group
-    less_than = full_data[full_data["income"]=="<=50K"]
-    greater_than = full_data[full_data["income"]==">50K"]
-
-    # Conducting Undersampling Here 
-    greater_than_count = greater_than.shape[0]
-    less_than_under = less_than.sample(greater_than_count)
-
-
-    under_sampled_data = pd.concat([greater_than, less_than_under], axis=0)
-    under_sampled_data["lower_income_bool"] = under_sampled_data["income"] == "<=50K"
-
-    y = under_sampled_data["lower_income_bool"]
-    X = under_sampled_data.drop(columns=["income", "lower_income_bool"])
-    
-    return X, y
-
-def retrieve_covid_data(covid_fp, replace_num): 
+def retrieve_covid_data(covid_fp, replace_num, test_data=False): 
     """
     This function is used to retrieve the covid dataset
     """
-    covid = pd.read_csv(covid_fp)
-    # Cleaning up column names
-    covid.columns = covid.columns.str.strip().str.lower()
-
-    # Creating boolean column which is what will be predicted
-    covid["died_bool"] = covid["date_died"] != "9999-99-99"
-
-    # Replacing all 98 values with 97 so there is only one number that indicates whethe
-    # the value is missing
-    covid.replace(replace_num, 97, inplace=True)
+    if test_data == False:
+        covid = pd.read_csv(covid_fp)
+        # Cleaning up column names
+        covid.columns = covid.columns.str.strip().str.lower()
     
-    covid.drop(columns=["clasiffication_final", "date_died"], inplace=True)
+        # Creating boolean column which is what will be predicted
+        covid["died_bool"] = covid["date_died"] != "9999-99-99"
     
-    return covid 
+        # Replacing all 98 values with 97 so there is only one number that indicates whether
+        # the value is missing
+        covid.replace(replace_num, 97, inplace=True)
+        
+        covid.drop(columns=["clasiffication_final", "date_died"], inplace=True)
+        
+        return covid 
+    else: 
+        test = pd.read_csv(covid_fp)
+        # Cleaning up column names
+        test.columns = test.columns.str.strip().str.lower()
+        return test
 
 ### GMM
 def gmm_adults(gmm_adult_ts): 
@@ -195,7 +169,7 @@ def gmm_adults(gmm_adult_ts):
         file.write(f"Accuracy: {accuracy_score(y_test, y_pred)}\n")
         file.write(f"Classification Report: {classification_report(y_test, y_pred)}\n")
 
-def gmm_covid(covid_fp, replace_num, gmm_covid_ts): 
+def gmm_covid(covid_fp, replace_num, gmm_covid_ts,test_data=False): 
     """
     This function outputs a classification report for the the Gaussian Mixture model for 
     covid dataset - am only looking at it's ability to identify 2 groups. 
@@ -250,7 +224,7 @@ def gmm_covid(covid_fp, replace_num, gmm_covid_ts):
     
     return X_scaled, y, gmm
 
-def plot_pca_gmm_covid(covid_fp, replace_num, gmm_covid_ts):
+def plot_pca_gmm_covid(covid_fp, replace_num, gmm_covid_ts, test_data=False):
     """
     This function is used to plot compare the two group that the GMM identifies 
     to the 2 original groups.
@@ -295,49 +269,76 @@ def plot_pca_gmm_covid(covid_fp, replace_num, gmm_covid_ts):
 
     plt.savefig(output_file_path, dpi=300)
 
-
-### KMeans
 def kmeans_adults(): 
     X, y = retrieve_adult_data()
-    data = pd.concat([X,y], axis=1)
+    data = pd.concat([X, y], axis=1)
     
+    # Encode categorical features
     categorical_cols = data.select_dtypes(include=['object']).columns
     data[categorical_cols] = data[categorical_cols].apply(LabelEncoder().fit_transform)
+    
+    # Standardize numerical features
     scaler = StandardScaler()
     numeric_cols = data.select_dtypes(include=['int64', 'float64']).columns
     data[numeric_cols] = scaler.fit_transform(data[numeric_cols])
     
-    k = 2
+    # Apply k-means clustering
+    k = 5
     kmeans = KMeans(n_clusters=k, random_state=0)
-    data['cluster'] = kmeans.fit_predict(data)
+    data['cluster'] = kmeans.fit_predict(data[numeric_cols])
     
+    # Calculate silhouette score
     score = silhouette_score(data[numeric_cols], data['cluster'])
     print(f'Silhouette Score for {k} clusters: {score}')
     
-    # If you need dimensionality reduction (for datasets with >2 features)
+    # Dimensionality reduction for visualization
     pca = PCA(n_components=2)
-    X_reduced = pca.fit_transform(data)
-
+    X_reduced = pca.fit_transform(data[numeric_cols])  # Use only numeric features
+    
     # Plot the clusters
     plt.figure(figsize=(10, 6))
     sns.scatterplot(x=X_reduced[:, 0], y=X_reduced[:, 1], hue=data['cluster'], palette='viridis', s=50)
 
-    # Mark cluster centers
-    centers = kmeans.cluster_centers_
-    centers_reduced = pca.transform(centers)  # Reduce dimensions for plotting
-    plt.scatter(centers_reduced[:, 0], centers_reduced[:, 1], c='red', s=200, alpha=0.6, label='Centers')
-    plt.title("K-means Clustering")
-    plt.xlabel("PCA Component 1")
-    plt.ylabel("PCA Component 2")
-    plt.legend()
-
     # Save the plot as a PNG file
-    output_model_folder = os.path.join(repo_root, "gmm_kmeans_results")
+    output_folder = "gmm_kmeans_results"
     os.makedirs(output_folder, exist_ok=True)
-
-    output_file_path = os.path.join(output_folder, "kmeans_adults")
-
+    output_file_path = os.path.join(output_folder, "kmeans_adults.png")
     plt.savefig(output_file_path, dpi=300)
+
+def retrieve_adult_data():
+    """
+    This function is used to retrieve UCI's adult dataset
+    """
+    # Fetch dataset 
+    adult = fetch_openml(name='adult', version=2, as_frame=True)
+
+    # Data (as pandas dataframes) 
+    X = adult.data
+    y = adult.target
+    
+    # Cleaning target values
+    y.replace("<=50K.", "<=50K", inplace=True)
+    y.replace(">50K.", ">50K", inplace=True)
+    
+    # Group the original dataset for how it was 
+    full_data = pd.concat([X, y], axis=1)
+
+    # Breaking up the groups so we can do undersampling for the "greater than" group
+    less_than = full_data[full_data["class"] == "<=50K"]
+    greater_than = full_data[full_data["class"] == ">50K"]
+
+    # Conducting undersampling here 
+    greater_than_count = greater_than.shape[0]
+    less_than_under = less_than.sample(greater_than_count)
+
+    under_sampled_data = pd.concat([greater_than, less_than_under], axis=0)
+    under_sampled_data["lower_income_bool"] = under_sampled_data["class"] == "<=50K"
+
+    y = under_sampled_data["lower_income_bool"]
+    X = under_sampled_data.drop(columns=["class", "lower_income_bool"])
+    
+    return X, y
+
 
 
 # Image Pre-Processing 
