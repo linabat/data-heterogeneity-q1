@@ -22,6 +22,10 @@ Install the required dependencies by running the following command while in the 
 ```bash
 conda env create -f environment.yml
 ```
+One the environment has been creates, run 
+```bash
+conda activate data-heterogeneity-q1
+```
 
 
 Let's start by looking at the results for the **waterbirds dataset**. This dataset comes from [this repository](https://github.com/kohpangwei/group_DRO). Below are the steps to get this code working for this dataset and retrieve the same results as we did
