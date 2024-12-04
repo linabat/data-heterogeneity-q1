@@ -20,7 +20,7 @@ git clone https://github.com/linabat/data-heterogeneity-q1.git
 Install the required dependencies by running the following command while in the project repository:
 
 ```bash
-conda  create -n data-heterogeneity-q1 python=3.11
+conda  create -n data-heterogeneity-q1 python=3.11.9
 ```
 Once the environment has been created, run 
 ```bash
