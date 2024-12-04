@@ -25,6 +25,7 @@ from etl import (
     
 if __name__ == '__main__':
     args = sys.argv[1:]
+    # CENSUS
     if 'census_income_model' in args: 
         with open("config/census_income.json", "r") as file:
             config = json.load(file)
@@ -55,6 +56,28 @@ if __name__ == '__main__':
             config = json.load(file)
         run_census_cosine(**config)
 
+    if 'run_census_all' in args: 
+        with open("config/census_income.json", "r") as file:
+            config = json.load(file)
+        run_census(**config)
+        with open("config/census_income_cosine.json", "r") as file:
+            config = json.load(file)
+        run_census_cosine(**config)
+        with open("config/census_employment.json", "r") as file:
+            config = json.load(file)
+        run_census(**config)
+        with open("config/census_employment_cosine.json", "r") as file:
+            config = json.load(file)
+        run_census_cosine(**config)
+        with open("config/census_public_coverage.json", "r") as file:
+            config = json.load(file)
+        run_census(**config)
+        with open("config/census_public_coverage_cosine.json", "r") as file:
+            config = json.load(file)
+        run_census_cosine(**config)
+        
+
+    # WATERBIRDS
     if "download_wb_data" in args: 
         with open("config/waterbirds_download_data.json", "r") as file:
             config = json.load(file)
@@ -68,15 +91,24 @@ if __name__ == '__main__':
             config = json.load(file)
         run_waterbirds(**config)
 
+    if 'run_all_waterbirds' in args: 
+        with open("config/waterbirds_download_data.json", "r") as file:
+            config = json.load(file)
+        download_wb_data(**config)
 
-    # COME BACK AND UPDATE
+        retrieve_wb_features()
+
+        with open("config/waterbirds_run_data.json", "r") as file:
+            config = json.load(file)
+        run_waterbirds(**config)
+
+    # KMeans and GMMs
     if 'gmm_adults' in args: 
         with open('config/data-params.json') as fh:
             data_params = json.load(fh)
         
         gmm_adults(data_params["gmm_adult_ts"])
 
-    # COME BACK AND UPDATE
     if 'gmm_covid' in args:
         with open('config/data-params.json') as fh:
             data_params = json.load(fh)
@@ -87,13 +119,11 @@ if __name__ == '__main__':
         data_params["gmm_covid_ts"]
     )
         
-    # COME BACK AND UPDATE
     if 'plot_gmm_covid' in args: 
         with open('config/data-params.json') as fh:
             data_params = json.load(fh)
         plot_pca_gmm_covid()
 
-    # COME BACK AND UPDATE
     if 'kmeans_adults' in args:
         with open('config/data-params.json') as fh:
             data_params = json.load(fh)
