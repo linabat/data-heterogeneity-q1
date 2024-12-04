@@ -146,7 +146,7 @@ Cluster 3: = [KY, LA, MA, MD, ME, MI, MN, MO, MS, MT, NC, NH, NJ, NM, NV, NY]
 ---
 
 ### At the start of the quarter, we look into common GMM and KMeans clustering methods on UCI Adults dataset and a Covid Dataset 
-Our results are stored in the `gmm_kmean_results` folder.  If you would like to replicate the results for the Adults Dataset, in terminal run 
+Our results are stored in the `gmm_kmean_results` folder. If you would like to replicate the results for the Adults Dataset, in terminal run 
 ```bash
 python run.py gmm_adults
 ```
@@ -155,7 +155,7 @@ python run.py kmeans_adults
 
 ```
 
-If you would to replicate the results for the COVID dataset, in terminal run 
+If you would to replicate the results for the COVID dataset, you will first need to download the csv from [kaggle](https://www.kaggle.com/datasets/meirnizri/covid19-dataset) and save csv in the repository. Go to `config` folder and go to `covid.json`. From here, paste the path to the csv for `covid_fp key`.  The in terminal run  
 ```bash
 python run.py gmm_covid
 ```
