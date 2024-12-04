@@ -12,7 +12,7 @@ To achieve the same results as we did, follow these steps:
 
 Clone this repository and navigate to the root directory.
 ```bash
-git clone git@github.com:linabat/data-heterogeneity-q1.git
+git clone https://github.com/linabat/data-heterogeneity-q1.git
 ```
 
 ### Install Dependencies
@@ -22,11 +22,15 @@ Install the required dependencies by running the following command while in the 
 ```bash
 conda env create -f environment.yml
 ```
-One the environment has been creates, run 
+Once the environment has been created, run 
 ```bash
 conda activate data-heterogeneity-q1
 ```
 
+Alternatively, you can do 
+```bash
+pip install -r requirements.txt
+```
 
 Let's start by looking at the results for the **waterbirds dataset**. This dataset comes from [this repository](https://github.com/kohpangwei/group_DRO). Below are the steps to get this code working for this dataset and retrieve the same results as we did
 ### Steps:
@@ -35,9 +39,20 @@ Let's start by looking at the results for the **waterbirds dataset**. This datas
    - Save the `.tar.gz` file in the cloned repository directory and note the file's path.
 2. **Update Configuration**  
    - Navigate to the `config` folder in the repository.
-   - Update the `tar_file_path` key in the relevant JSON file with the relative path to the `.tar.gz` file.
+   - Update the `tar_file_path` key in the `waterbids_download_data.json` file with the relative path to the `.tar.gz` file.
+3. **To run all the steps for waterbirds**
+    -Run in terminal
+   ```bash
+   python run.py run_all_waterbirds
+   ```
+**NOTE: If an error about tensorflow.keras module not found run**
+
+  ```bash
+  pip install --upgrade --force-reinstall tensorflow
+  ```
+**To run the steps seperately**
 3. **Extract the Dataset**  
-   - Run the following command to extract the dataset into a folder called `waterbirds_data` in the repository directory:
+    - Run the following command to extract the dataset into a folder called `waterbirds_data` in the repository directory:
      ```bash
      python run.py download_wb_data
      ```
@@ -62,7 +77,9 @@ Let's start by looking at the results for the **waterbirds dataset**. This datas
 ### Results
 
 Below are the results for the Waterbirds dataset:  
-*(Insert detailed results, charts COME AND DO LATER)*
+Accuracy Proportions Per Cluster
+Cluster 0: 0.9771
+Cluster 1: 0.5721
 
 ---
 ## Census-Based Datasets
@@ -78,8 +95,12 @@ Moving on, let's take a look at the other three datasets, which come from the sa
 The steps to process these datasets are the same for all three data processors. Below, we'll use **ACSIncome** as an example.
 
 ### Steps for Processing ACSIncome
-
-1. **Run the Model** 
+1. **Run All Results**
+   To run all the relevant parts to retrieve the census results, run in terminal
+   ```bash
+   python run.py run_census_all
+   ```
+2. **Run the Model Individual Parts of the Model -- ALL STEPS BELOW**
    Run in terminal
    ```bash
    python run.py census_income_model
@@ -106,9 +127,23 @@ python run.py census_public_coverage_model census_public_coverage_cosine
 ---
 
 ### Results
-
 Below are the results for the Waterbirds dataset:  
-*(Insert detailed results, charts COME AND DO LATER)*
+The clusters for employment are: 
+Cluster 0: = [AK, AL, AR, AZ, CA, CO, CT, FL, GA, IA, ID, IL, IN, KS, KY, LA, MA, MD, ME, MI, MN, MO, MS, MT, NC, ND, NH, NJ, NM, NV, NY, OH, OK, OR, PA, RI, SC, SD, TN, TX, UT, VA, VT, WA, WI, WV, WY]
+Cluster 1: = [DE]
+Cluster 2: = [HI, PR]
+
+The clusters for income are: 
+
+Cluster 0: = [AK, AL, AR, AZ, CO, CT, DE, FL, GA, IA, ID, IL, IN, KS]
+Cluster 1: = [NC, ND, NH, NJ, NM, NY, OH, OK, OR, PA, RI, SC, SD, TN, TX, UT, VA, VT, WA, WI, WV, WY]
+Cluster 2: = [CA, HI, NV, PR]
+Cluster 3: = [KY, LA, MA, MD, ME, MI, MN, MO, MS, MT]
+
+The clusters for public coverage are: 
+Cluster 0: = [ND, OH, OK, OR, PA, PR, RI, SC, SD, TN, TX, UT, VA, VT, WA, WI, WV, WY]
+Cluster 2: = [AK, AL, AR, AZ, CA, CO, CT, DE, FL, GA, HI, IA, ID, IL, IN, KS]
+Cluster 3: = [KY, LA, MA, MD, ME, MI, MN, MO, MS, MT, NC, NH, NJ, NM, NV, NY]
 
 ---
 When running 4 clusters, these are our results for
