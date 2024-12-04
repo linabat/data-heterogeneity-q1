@@ -15,5 +15,3 @@ dependencies:
   - pip
   - pip:
       - folktables==0.0.12
-      - tensorflow.keras
-prefix: /home/lbattikha/.conda/envs/data-heterogeneity-q1
