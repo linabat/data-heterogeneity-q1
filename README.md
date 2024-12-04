@@ -20,14 +20,12 @@ git clone https://github.com/linabat/data-heterogeneity-q1.git
 Install the required dependencies by running the following command while in the project repository:
 
 ```bash
-conda env create -f environment.yml
+conda  create -n data-heterogeneity-q1 python=3.11
 ```
 Once the environment has been created, run 
 ```bash
 conda activate data-heterogeneity-q1
 ```
-
-Alternatively, you can do 
 ```bash
 pip install -r requirements.txt
 ```
@@ -146,9 +144,28 @@ Cluster 2: = [AK, AL, AR, AZ, CA, CO, CT, DE, FL, GA, HI, IA, ID, IL, IN, KS]
 Cluster 3: = [KY, LA, MA, MD, ME, MI, MN, MO, MS, MT, NC, NH, NJ, NM, NV, NY]
 
 ---
-When running 4 clusters, these are our results for
-Building the project stages using run.py.
-    - To run the Gaussian Model Mixture model on the adults dataset, run python run.py gmm_adults
-     - To run the Gaussian Model Mixture model on the covid dataset, run python run.py gmm_covid
-     - To plot the Gaussian Model Mixture model clusters and original clusters on the covid dataset, run python run.py plot_gmm_covid
-     - To run the K-Means clustering and visualize the clusters on the adults dataset, run python kmeans_adults
+
+### At the start of the quarter, we look into common GMM and KMeans clustering methods on UCI Adults dataset and a Covid Dataset 
+Our results are stored in the `gmm_kmean_results` folder.  If you would like to replicate the results for the Adults Dataset, in terminal run 
+```bash
+python run.py gmm_adults
+```
+```bash
+python run.py kmeans_adults
+
+```
+
+If you would to replicate the results for the COVID dataset, in terminal run 
+```bash
+python run.py gmm_covid
+```
+```bash
+python run.py plot_gmm_covid
+```
+
+Despite the common use of these clustering algorithms, with the results retrieved, it can be seen that the performance of such model is not good, indicating that we should look into other algorithms for clustering.
+
+
+
+
+     
