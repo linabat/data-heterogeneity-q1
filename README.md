@@ -75,8 +75,8 @@ Let's start by looking at the results for the **waterbirds dataset**. This datas
 ### Results
 
 Below are the results for the Waterbirds dataset:  
-Accuracy Proportions Per Cluster
-Cluster 0: 0.9771
+Accuracy Proportions Per Cluster\
+Cluster 0: 0.9771\
 Cluster 1: 0.5721
 
 ---
@@ -98,7 +98,8 @@ The steps to process these datasets are the same for all three data processors. 
    ```bash
    python run.py run_census_all
    ```
-2. **Run the Model Individual Parts of the Model -- ALL STEPS BELOW**
+2. **Run the Model Individual Parts of the Model**
+   Will be using the income dataset for this example, but this these are steps that can be replicated for the other 2 datasets below (mentioned below)
    Run in terminal
    ```bash
    python run.py census_income_model
@@ -106,7 +107,7 @@ The steps to process these datasets are the same for all three data processors. 
     - This will output csv with the clusters for each row in `census_retrieved_data`
     - In `model_results` folder, will be able to see the states the belong to each cluster.
     - The number of clusters can be changed in the config file (in this case, the file is `config/census_income.json`)
-3. **Visualize Cosine Similarity**
+4. **Visualize Cosine Similarity**
    To run cosine similarity to visually see the similarities between the states, run
    ```bash
    python run.py census_income_cosine
@@ -116,11 +117,17 @@ The steps to process these datasets are the same for all three data processors. 
 #### Running ACSEmployment and ACSPublicCoverage
 Here are is how to run the other two data processor datasets 
 ```bash
-python run.py census_employment_model census_employment_cosine
+python run.py census_employment_model 
+```
+```bath
+python run.py census_employment_cosine
 ```
 
 ``` bash
-python run.py census_public_coverage_model census_public_coverage_cosine
+python run.py census_public_coverage_model 
+```
+```bash
+python run.py census_public_coverage_cosine
 ```
 ---
 
