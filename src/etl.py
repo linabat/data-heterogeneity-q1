@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler, LabelEncoder 
 from sklearn.mixture import GaussianMixture 
+from sklearn.cluster import KMeans
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.decomposition import PCA
@@ -188,7 +189,7 @@ def gmm_adults(gmm_adult_ts):
     
     output_model_folder = os.path.join(repo_root, "gmm_kmeans_results")
     os.makedirs(output_model_folder, exist_ok=True)
-    output_txt_path = os.path.join(output_model_folder, output_model_results)
+    output_txt_path = os.path.join(output_model_folder, "gmm_adults_results.txt")
     with open(output_txt_path, "w") as file:
         # Proportions for each cluster
         file.write(f"Accuracy: {accuracy_score(y_test, y_pred)}\n")
@@ -241,20 +242,21 @@ def gmm_covid(covid_fp, replace_num, gmm_covid_ts):
 
     output_model_folder = os.path.join(repo_root, "gmm_kmeans_results")
     os.makedirs(output_model_folder, exist_ok=True)
-    output_txt_path = os.path.join(output_model_folder, output_model_results)
+    output_txt_path = os.path.join(output_model_folder, "gmm_covid_results.txt")
     with open(output_txt_path, "w") as file:
         # Proportions for each cluster
         file.write(f"Accuracy: {accuracy_score(y_test, mapped_y_pred)}\n")
         file.write(f"Classification Report: {classification_report(y_test, mapped_y_pred)}\n")
     
-    return X_scaled
+    return X_scaled, y, gmm
 
-def plot_pca_gmm_covid():
+def plot_pca_gmm_covid(covid_fp, replace_num, gmm_covid_ts):
     """
     This function is used to plot compare the two group that the GMM identifies 
     to the 2 original groups.
     """
-    X_scaled = gmm_covid()
+    
+    X_scaled, y, gmm = gmm_covid(covid_fp, replace_num, gmm_covid_ts)
     # Perform PCA to reduce the dataset to 2D
     pca = PCA(n_components=2)
     X_pca = pca.fit_transform(X_scaled)
@@ -265,7 +267,7 @@ def plot_pca_gmm_covid():
     # Create a DataFrame with PCA results, GMM clusters, and original class labels
     pca_df = pd.DataFrame(data=X_pca, columns=['PCA1', 'PCA2'])
     pca_df['GMM Cluster'] = y_cluster
-    pca_df['Original Class'] = y  # Assuming `y_sample` is the original target label
+    pca_df['Original Class'] = y # Assuming `y_sample` is the original target label
 
     # Plot side-by-side comparison of GMM clusters and original classes
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
@@ -286,7 +288,7 @@ def plot_pca_gmm_covid():
 
     plt.tight_layout()
     # Save the plot as a PNG file
-    output_model_folder = os.path.join(repo_root, "gmm_kmeans_results")
+    output_folder = os.path.join(repo_root, "gmm_kmeans_results")
     os.makedirs(output_folder, exist_ok=True)
 
     output_file_path = os.path.join(output_folder, "gmm_covid_pca")
