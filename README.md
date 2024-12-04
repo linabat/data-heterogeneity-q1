@@ -17,10 +17,10 @@ git clone git@github.com:linabat/data-heterogeneity-q1.git
 
 ### Install Dependencies
 
-Install the required dependencies by running the following command:
+Install the required dependencies by running the following command while in the project repository:
 
 ```bash
-pip install -r requirements.txt
+conda env create -f environment.yml
 ```
 
 
