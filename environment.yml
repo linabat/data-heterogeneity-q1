@@ -4,4 +4,14 @@ channels:
 dependencies:
   - python=3.11.9
   - gmpy2
+  - numpy
+  - tensorflow
+  - pandas
+  - matplotlib
+  - scikit-learn
+  - seaborn
+  - tqdm
+  - ucimlrepo
+  - pip:
+      - folktables==0.0.12
 prefix: /home/lbattikha/.conda/envs/data-heterogeneity-q1
