@@ -12,6 +12,7 @@ dependencies:
   - seaborn
   - tqdm
   - ucimlrepo
+  - pip
   - pip:
       - folktables==0.0.12
 prefix: /home/lbattikha/.conda/envs/data-heterogeneity-q1
