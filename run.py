@@ -142,6 +142,7 @@ if __name__ == '__main__':
         data_params["gmm_covid_ts"], 
                 test_data=True
             )
+        print ("Test data completed")
 
     if 'kmeans_adults' in args:
         with open('config/covid.json') as fh:
